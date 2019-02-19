@@ -16,6 +16,9 @@ use rustc_save_analysis::{SaveContext, SaveHandler};
 use rustc_save_analysis as save;
 use syntax::{ast,visit};
 
+use std::env;
+use std::process::Command;
+
 // Where all the work is done
 mod visitor;
 
@@ -84,8 +87,16 @@ impl SaveHandler for FnSaveHandler {
 // args are the arguments passed on the command line, generally passed through
 // to the compiler.
 pub fn run(args: Vec<String>) {
+    let mut args = args.clone();
+
     // Create a data structure to control compilation.
     let calls = Box::new(CallGraphCalls);
+
+    let sysroot = current_sysroot()
+        .expect("need to specify SYSROOT env var or use rustup or multirust");
+
+    args.push("--sysroot".to_owned());
+    args.push(sysroot);
 
     // Run the compiler!
     syntax::with_globals(|| {
@@ -93,18 +104,21 @@ pub fn run(args: Vec<String>) {
     });
 }
 
-// fn sys_root_path() -> PathBuf {
-//     env::var("SYSROOT")
-//         .ok()
-//         .map(PathBuf::from)
-//         .or_else(|| {
-//             Command::new(env::var("RUSTC").unwrap_or(String::from("rustc")))
-//                 .arg("--print")
-//                 .arg("sysroot")
-//                 .output()
-//                 .ok()
-//                 .and_then(|out| String::from_utf8(out.stdout).ok())
-//                 .map(|s| PathBuf::from(s.trim()))
-//         })
-//         .expect("need to specify SYSROOT or RUSTC env vars, or rustc must be in PATH")
-// }
+fn current_sysroot() -> Option<String> {
+    let home = env::var("RUSTUP_HOME").or_else(|_| env::var("MULTIRUST_HOME"));
+    let toolchain = env::var("RUSTUP_TOOLCHAIN").or_else(|_| env::var("MULTIRUST_TOOLCHAIN"));
+    if let (Ok(home), Ok(toolchain)) = (home, toolchain) {
+        Some(format!("{}/toolchains/{}", home, toolchain))
+    } else {
+        let rustc_exe = env::var("RUSTC").unwrap_or_else(|_| "rustc".to_owned());
+        env::var("SYSROOT").ok().or_else(|| {
+            Command::new(rustc_exe)
+                .arg("--print")
+                .arg("sysroot")
+                .output()
+                .ok()
+                .and_then(|out| String::from_utf8(out.stdout).ok())
+                .map(|s| s.trim().to_owned())
+        })
+    }
+}
