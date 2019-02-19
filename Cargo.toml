@@ -1,10 +1,11 @@
 [package]
-
 name = "callgraph"
-version = "0.0.1"
-authors = ["Nicholas Cameron <nrc@ncameron.org>"]
+version = "0.1.0"
+authors = ["Nicholas Cameron <nrc@ncameron.org>","Pierre Chifflier <chifflier@wzdftpd.net>"]
 description = "Compute the callgraph of a crate"
-repository = "https://github.com/nick29581/callgraph"
+repository = "https://github.com/chifflier/callgraph.rs"
 readme = "README.md"
 license = "Apache-2.0/MIT"
+edition = "2018"
 
+[dependencies]
